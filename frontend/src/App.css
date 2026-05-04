@@ -1,0 +1,302 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: #f3f5f8;
+  color: #111827;
+}
+
+button,
+input,
+textarea {
+  font-family: inherit;
+}
+
+.page {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 36px 24px;
+}
+
+.hero {
+  background: linear-gradient(135deg, #1e3a8a, #0f172a);
+  color: #ffffff;
+  border-radius: 24px;
+  padding: 42px 36px;
+  margin-bottom: 24px;
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.22);
+  text-align: center;
+}
+
+.badge {
+  display: inline-block;
+  margin: 0 0 18px 0;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #e0f2fe;
+  letter-spacing: 0.3px;
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: 38px;
+  font-weight: 800;
+  letter-spacing: -0.8px;
+  color: #ffffff;
+}
+
+.hero p:last-child {
+  margin: 18px 0 0;
+  color: #dbeafe;
+  line-height: 1.7;
+  font-size: 18px;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: 24px;
+}
+
+.card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 22px;
+  padding: 24px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.card h2 {
+  margin: 0;
+  font-size: 23px;
+}
+
+.desc {
+  margin: 8px 0 22px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+label {
+  display: block;
+  margin: 16px 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+input,
+textarea {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 14px;
+  padding: 13px 14px;
+  font-size: 15px;
+  outline: none;
+  background: white;
+}
+
+input:focus,
+textarea:focus {
+  border-color: #111827;
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.08);
+}
+
+textarea {
+  height: 180px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-weight: 600;
+}
+
+.check-row input {
+  width: auto;
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+button {
+  border: none;
+  border-radius: 13px;
+  padding: 12px 17px;
+  background: #111827;
+  color: white;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+button.secondary {
+  background: #4b5563;
+}
+
+button.ghost {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+button.sample {
+  background: #f3f4f6;
+  color: #111827;
+  border: 1px solid #e5e7eb;
+  margin: 6px 6px 0 0;
+  padding: 9px 12px;
+  font-weight: 700;
+}
+
+.test-box {
+  margin-top: 24px;
+  padding: 16px;
+  border-radius: 16px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+}
+
+.test-box h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.summary {
+  padding: 17px;
+  border-radius: 16px;
+  font-weight: 800;
+  margin-bottom: 18px;
+  border: 1px solid #e5e7eb;
+}
+
+.summary.empty {
+  background: #f9fafb;
+  color: #6b7280;
+}
+
+.summary.safe {
+  background: #ecfdf5;
+  color: #047857;
+  border-color: #a7f3d0;
+}
+
+.summary.warning {
+  background: #fffbeb;
+  color: #b45309;
+  border-color: #fde68a;
+}
+
+.summary.blocked {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.result-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.mini-card {
+  padding: 16px;
+  border-radius: 16px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+}
+
+.mini-card span {
+  display: block;
+  color: #6b7280;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.mini-card strong {
+  font-size: 18px;
+}
+
+.risk-bar {
+  height: 15px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.risk-fill {
+  height: 100%;
+  background: #111827;
+  transition: width 0.25s ease;
+}
+
+.detail {
+  margin-top: 19px;
+}
+
+.detail h3 {
+  margin: 0 0 10px;
+  font-size: 16px;
+}
+
+pre {
+  background: #111827;
+  color: #e5e7eb;
+  padding: 16px;
+  border-radius: 16px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  line-height: 1.5;
+  min-height: 48px;
+}
+
+.error-box {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.error-box pre {
+  background: transparent;
+  color: #991b1b;
+  padding: 0;
+}
+
+.history-card {
+  margin-top: 24px;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .result-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero h1 {
+    font-size: 29px;
+  }
+}
