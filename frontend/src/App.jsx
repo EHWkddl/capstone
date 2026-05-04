@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import './App.css'
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
 function App() {
   const [conversationId, setConversationId] = useState('demo1')
@@ -30,7 +29,7 @@ function App() {
     setResult(null)
 
     try {
-      const response = await fetch(`${API_BASE_URL}/chat`, {
+      const response = await fetch(`${API_BASE_URL}/api/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -60,7 +59,9 @@ function App() {
     setError('')
 
     try {
-      const response = await fetch(`${API_BASE_URL}/history/${conversationId}`)
+      const response = await fetch(
+        `${API_BASE_URL}/api/history/${conversationId}`,
+      )
       const data = await response.json()
       setHistory(data)
     } catch (err) {
