@@ -97,6 +97,7 @@ def home():
 
 @app.post("/chat")
 @app.post("/api/chat")
+@app.post("/analyze")
 @app.post("/api/analyze")
 async def analyze(req: AnalyzeRequest):
     try:
