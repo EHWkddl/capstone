@@ -1,39 +1,65 @@
-# yara_scanner.py
 import yara
 import os
 
 class YaraScanner:
     def __init__(self, rule_path: str = "index.yar"):
-        """서버 시작 시 YARA 룰을 한 번만 컴파일하여 메모리에 적재합니다."""
+        """서버 시작 시 YARA 룰을 메모리에 적재합니다."""
         if not os.path.exists(rule_path):
             raise FileNotFoundError(f"YARA 룰 파일을 찾을 수 없습니다: {rule_path}")
         
-        self.rules = yara.compile(filepath=rule_path)
+        try:
+            # 한글 인코딩 방어 로직
+            self.rules = yara.compile(filepath=rule_path)
+        except yara.Error as e:
+            if "Illegal byte sequence" in str(e) or "invalid" in str(e):
+                print(f"💡 [알림] {rule_path} 한글 인코딩 감지! UTF-8로 로드합니다.")
+                with open(rule_path, 'r', encoding='utf-8') as f:
+                    rule_text = f.read()
+                self.rules = yara.compile(source=rule_text)
+            else:
+                raise e
 
     def analyze(self, text: str) -> dict:
-        """텍스트를 분석하여 기존 rule_detect와 동일한 형식의 딕셔너리를 반환합니다."""
+        """탐지된 룰의 개수에 따라 점수를 차등 부여합니다."""
+        if not hasattr(self, 'rules'):
+            return {"detected": False, "attack_type": "Error", "risk_score": 0, "reason": "YARA 엔진 로드 실패"}
+
         matches = self.rules.match(data=text)
         
         if matches:
-            match = matches[0] # 가장 먼저 매칭된 룰 적용 (필요시 여러 개 처리 가능)
+            # [복구] 탐지된 룰 개수에 따른 점수 산출
+            match_count = len(matches)
             
-            # 1. 일단 YARA 룰 이름(예: Prompt_Injection)을 변환
-            attack_type = match.rule.replace("_", " ") 
+            if match_count == 1:
+                risk_score = 40   # 주의
+                decision = "Warning"
+            elif match_count == 2:
+                risk_score = 75   # 위험
+                decision = "Danger"
+            else:
+                risk_score = 100  # 차단
+                decision = "Block"
+
+            # 첫 번째 매칭된 룰 기준으로 정보 생성
+            main_match = matches[0]
+            attack_type = main_match.rule.replace("_", " ")
             
-            # 2. 룰 이름에 "HF" 또는 "Blacklist"가 포함된 경우 Prompt Injection으로 간주
-            if "HF" in match.rule or "Blacklist" in match.rule:
-                attack_type = "HF Prompt Injection"
-            
+            if "HF" in main_match.rule or "Injection" in main_match.rule or "Blacklist" in main_match.rule:
+                attack_type = "AI Prompt Injection"
+
             return {
                 "detected": True,
                 "attack_type": attack_type,
-                "risk_score": match.meta.get("risk_score", 100), # HF 룰에 risk_score가 없다면 기본값 100 부여
-                "reason": f"YARA Rule matched: {match.rule}"
+                "risk_score": risk_score,
+                "decision": decision,
+                "reason": f"보안 규칙 {match_count}개 일치: {main_match.rule}",
+                "match_count": match_count
             }
 
         return {
             "detected": False,
             "attack_type": "Normal",
             "risk_score": 0,
-            "reason": "No rule matched"
+            "decision": "Allow",
+            "reason": "탐지된 위협 패턴 없음"
         }
