@@ -155,3 +155,22 @@ rule HF_Prompt_Injection_Korean_Smart_Regex {
     condition:
         any of them
 }
+
+rule HF_Prompt_Injection_Korean_Improved {
+    meta:
+        description = "키워드 조합 기반 한국어 프롬프트 인젝션 탐지 (우회 차단 강화)"
+        risk_score = 100
+    strings:
+        $kr_leak_0 = /보안\s*테스트/i
+        $kr_leak_1 = /(지시문|프롬프트|명령어|설정|가이드라인|규칙)\s*(사항)?을?\s*(공개|알려|보여|출력|복사)/i
+        
+        $kr_force = /(빨리|당장|지금\s*바로)/i
+
+        $kr_persona = /지금부터\s*(너는|당신은).*(모드|이야|역할|해커|빌런|역할극)/i
+        $kr_bypass = /(규칙|지침|제약|필터|가이드라인).*(무시|해제|파괴|잊고|취소)/i
+
+    condition:
+        ($kr_leak_0 and $kr_leak_1) or 
+        (any of ($kr_persona, $kr_bypass)) or
+        any of ($kr_leak_*) and $kr_force
+}
