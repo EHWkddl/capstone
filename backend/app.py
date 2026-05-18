@@ -1,11 +1,12 @@
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 import google.generativeai as genai
 
-from database import init_db, save_message, get_history
+# database.py에서 필요한 함수들을 가져옵니다 (get_full_logs 추가)
+from database import init_db, save_message, get_history, get_full_logs
 from security_engine import rule_detect, calculate_risk
 
 # =========================
@@ -37,6 +38,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 서버 시작 시 SQLite DB 초기화
 init_db()
 
 # =========================
@@ -61,9 +63,8 @@ reason: 짧은 이유
 """
 
 # =========================
-# 핵심 API: 보안진단 (경로 수정 완료)
+# 핵심 API: 보안진단
 # =========================
-# 프론트엔드에서 /analyze 또는 /api/analyze 중 무엇으로 보내도 작동하도록 설정
 @app.post("/analyze")
 @app.post("/api/analyze")
 async def analyze(req: AnalyzeRequest):
@@ -126,6 +127,15 @@ async def analyze(req: AnalyzeRequest):
             security_result = "주의가 필요한 입력입니다."
             status = "warning"
 
+        # ⭐ 진단 및 분석 결과를 데이터베이스(chat_logs)에 정확히 기록!
+        save_message(
+            conversation_id=conversation_id,
+            role="user",
+            content=user_input,
+            attack_type=final_attack_type,
+            risk_score=risk_result["risk_score"]
+        )
+
         # 6. 결과 반환
         return {
             "status": status,
@@ -141,3 +151,23 @@ async def analyze(req: AnalyzeRequest):
     except Exception as e:
         print(f"❌ 서버 에러 발생: {e}")
         return {"status": "error", "message": f"서버 에러: {str(e)}"}
+
+
+# ========================================================
+# 🛠️ [경로 수정 완료] 프론트엔드 하단 탐지 로그 조회용 API
+# 프론트엔드가 호출하는 /history 주소를 연결했습니다.
+# ========================================================
+@app.get("/history/{conversation_id}")
+@app.get("/api/history/{conversation_id}")
+async def get_logs_history(conversation_id: str):
+    """프론트엔드 하단 스크롤 영역에 뿌려줄 탐지 로그 내역을 /history 경로를 통해 반환합니다."""
+    try:
+        # database.py에서 갱신해둔 전체 히스토리 로그 가져오기
+        logs = get_full_logs(conversation_id.strip())
+        if not logs:
+            # 로그가 아직 없는 초기 상태면 에러를 던지지 않고 프론트엔드 안정성을 위해 빈 배열[]을 줍니다.
+            return []
+        return logs
+    except Exception as e:
+        print(f"❌ 로그 조회 에러: {e}")
+        raise HTTPException(status_code=500, detail=f"로그 조회 실패: {str(e)}")
