@@ -18,7 +18,7 @@ if not GOOGLE_API_KEY:
     raise RuntimeError("GOOGLE_API_KEY가 설정되지 않았습니다. backend/.env 파일을 확인하세요.")
 
 genai.configure(api_key=GOOGLE_API_KEY)
-model = genai.GenerativeModel("models/gemini-2.0-flash") 
+model = genai.GenerativeModel("models/gemini-2.5-flash") 
 
 # =========================
 # FastAPI 설정
