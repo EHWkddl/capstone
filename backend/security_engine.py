@@ -44,7 +44,7 @@ def calculate_risk(rule_result, llm_result):
         and score < 100
     ):
 
-        llm_bonus = 20
+        llm_bonus = 40
 
         score += llm_bonus
 
