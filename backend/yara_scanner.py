@@ -20,46 +20,33 @@ class YaraScanner:
                 raise e
 
     def analyze(self, text: str) -> dict:
-        """탐지된 룰의 개수에 따라 점수를 차등 부여합니다."""
-        if not hasattr(self, 'rules'):
-            return {"detected": False, "attack_type": "Error", "risk_score": 0, "reason": "YARA 엔진 로드 실패"}
-
+        """텍스트를 분석하여 모든 매칭 룰의 위험도를 합산합니다."""
         matches = self.rules.match(data=text)
         
         if matches:
-            # [복구] 탐지된 룰 개수에 따른 점수 산출
-            match_count = len(matches)
-            
-            if match_count == 1:
-                risk_score = 40   # 주의
-                decision = "Warning"
-            elif match_count == 2:
-                risk_score = 75   # 위험
-                decision = "Danger"
-            else:
-                risk_score = 100  # 차단
-                decision = "Block"
+            total_risk_score = 0
+            detected_attacks = []
+            reasons = []
 
-            # 첫 번째 매칭된 룰 기준으로 정보 생성
-            main_match = matches[0]
-            attack_type = main_match.rule.replace("_", " ")
-            
-            if "HF" in main_match.rule or "Injection" in main_match.rule or "Blacklist" in main_match.rule:
-                attack_type = "AI Prompt Injection"
+            # 매칭된 모든 룰을 순회하며 점수 합산
+            for match in matches:
+                # 룰의 meta 데이터에서 risk_score 추출 (기본값 0)
+                score = match.meta.get("risk_score", 0)
+                total_risk_score += score
+                
+                detected_attacks.append(match.rule)
+                reasons.append(f"[{match.rule}] 매칭 (+{score}점)")
 
             return {
-                "detected": True,
-                "attack_type": attack_type,
-                "risk_score": risk_score,
-                "decision": decision,
-                "reason": f"보안 규칙 {match_count}개 일치: {main_match.rule}",
-                "match_count": match_count
+                "detected": total_risk_score > 0,
+                "risk_score": total_risk_score,
+                "attack_types": list(set(detected_attacks)), 
+                "reasons": reasons
             }
 
         return {
             "detected": False,
-            "attack_type": "Normal",
             "risk_score": 0,
-            "decision": "Allow",
-            "reason": "탐지된 위협 패턴 없음"
+            "attack_types": "Normal",
+            "reasons": ["탐지된 위협 패턴 없음"]
         }

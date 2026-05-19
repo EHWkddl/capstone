@@ -78,11 +78,15 @@ async def analyze(req: AnalyzeRequest):
 
         # 2. Rule 기반 탐지 (YARA 스캔)
         rule_result = rule_detect(user_input)
+        
+        # attack_types(리스트)를 안전하게 가져와 문자열로 변환
+        matched_rules = rule_result.get("attack_types", [])
+        rules_str = ", ".join(matched_rules) if matched_rules else "Normal"
 
         # [로그 출력] 터미널에서 점수 확인용
         print(f"\n--- [실시간 진단 로그] ---")
         print(f"입력: {user_input[:20]}...")
-        print(f"YARA결과: {rule_result.get('attack_type')} ({rule_result.get('risk_score')}점)")
+        print(f"YARA결과: {rule_result.get('attack_type')} ({rule_result.get('risk_score',0)}점)")
 
         # 3. LLM 기반 의미 분석 (에러 방어 로직)
         llm_detected = False
@@ -111,8 +115,8 @@ async def analyze(req: AnalyzeRequest):
 
         # 4. Risk Score 최종 계산
         risk_result = calculate_risk(rule_result, llm_result)
-        final_attack_type = rule_result["attack_type"] if rule_result.get("detected") else llm_attack_type
-
+        decision = risk_result["decision"]
+        final_attack_type = rules_str if rule_result.get("detected") else llm_attack_type
         # 5. 최종 결과 결정
         action = "허용"
         security_result = "정상 입력입니다."
