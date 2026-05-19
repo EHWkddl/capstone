@@ -34,12 +34,33 @@ def text_to_yara_regex(text):
     return f"/{regex_pattern}/i"
 
 def generate_hf_yara():
-    print("Hugging Face에서 데이터셋 로드 중...")
+    # 여러 데이터셋의 프롬프트를 담을 통합 리스트
+    all_malicious_prompts = []
     
-    dataset = load_dataset("deepset/prompt-injections", split="train")
-    injections = dataset.filter(lambda x: x['label'] == 1)
+    print("1. deepset/prompt-injections 데이터셋 로드 중...")
+    try:
+        dataset_1 = load_dataset("deepset/prompt-injections", split="train")
+        for row in dataset_1:
+            if row['label'] == 1: # 1이 공격 프롬프트
+                all_malicious_prompts.append(row['text'])
+    except Exception as e:
+        print(f"deepset 데이터셋 로드 실패: {e}")
 
-    yara_content = """/* Auto-generated Smart Regex Rules from Hugging Face */
+    print("2. TrustAIRLab/in-the-wild-jailbreak-prompts 데이터셋 로드 중...")
+    try:
+        # TrustAIRLab 데이터셋은 컬럼명이 'prompt' 이며, 'jailbreak' 여부가 boolean으로 들어있습니다.
+        dataset_2 = load_dataset("TrustAIRLab/in-the-wild-jailbreak-prompts", split="train")
+        for row in dataset_2:
+            if row.get('jailbreak', True): # jailbreak 값이 True인 경우만 수집
+                # 빈 값이나 Null 방어 로직 포함
+                if row.get('prompt') and isinstance(row['prompt'], str):
+                    all_malicious_prompts.append(row['prompt'])
+    except Exception as e:
+        print(f"TrustAIRLab 데이터셋 로드 실패: {e}")
+
+    print(f"총 {len(all_malicious_prompts)}개의 악성 프롬프트 텍스트를 수집했습니다. YARA 룰 변환을 시작합니다...")
+
+    yara_content = """/* Auto-generated Smart Regex Rules from Hugging Face Datasets */
 rule HF_Prompt_Injection_Smart_Regex {
     meta:
         description = "띄어쓰기, 마침표, 줄바꿈 우회를 차단하는 정규식 기반 블랙리스트"
@@ -47,13 +68,11 @@ rule HF_Prompt_Injection_Smart_Regex {
     strings:
 """
     count = 0
-    for row in injections:
-        text = row['text']
-        
+    # 통합된 리스트를 순회하며 YARA 룰 생성
+    for text in all_malicious_prompts:
         if not is_korean_or_english(text):
             continue
 
-        # 🌟 핵심: 단순 문자열($str_0 = "...")이 아닌 유연한 정규식($re_0 = /.../)으로 변환
         yara_regex = text_to_yara_regex(text)
         
         if yara_regex:
