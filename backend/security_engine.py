@@ -1,68 +1,117 @@
 import os
-
 from yara_scanner import YaraScanner
 
 
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
 RULE_PATH = os.path.join(BASE_DIR, "index.yar")
 
 
-
-# 서버 시작 시 YARA 스캐너를 메모리에 올립니다.
-
+# 서버 시작 시 YARA 스캐너 메모리 적재
 scanner = YaraScanner(rule_path=RULE_PATH)
 
 
-
 def rule_detect(user_input: str):
-
     return scanner.analyze(user_input)
-
 
 
 def calculate_risk(rule_result, llm_result):
 
-    # 1. 기본 점수는 YARA 엔진의 점수를 그대로 가져옵니다 (40, 75, 100 등)
-
-    score = rule_result.get("risk_score", 0)
-
-
-
-    # 2. LLM(Gemini)이 추가로 탐지했다면 가산점을 줍니다.
-
-    # 단, YARA가 이미 100점(Block)이면 더 이상 더할 필요 없겠죠?
+    # YARA 기본 점수
+    score = rule_result.get(
+        "risk_score",
+        0
+    )
 
 
+    matched_rules = rule_result.get(
+        "matched_rules",
+        []
+    )
 
 
-    # 3. 최종 점수는 100점을 넘지 않도록 커트!
+    # LLM 탐지 결과 반영
+    # llm_result 예:
+    # {
+    #   "detected":True
+    # }
 
-    final_score = min(score, 100)
+    if (
+        llm_result
+        and llm_result.get(
+            "detected",
+            False
+        )
+        and score < 100
+    ):
+
+        llm_bonus = 20
+
+        score += llm_bonus
 
 
+        matched_rules.append({
 
-    # 4. 차단 기준 설정
+            "rule":"LLM_Detection",
 
-    if final_score >= 80:
+            "score":llm_bonus,
 
-        decision = "Block"
+            "severity":"medium",
 
-    elif final_score >= 40:
+            "reason":
+            "LLM 의미 기반 위험 탐지"
 
-        decision = "Warning"
+        })
+
+
+    # 최대 점수 제한
+    final_score=min(
+        score,
+        100
+    )
+
+
+    # 최종 판단
+    if final_score>=80:
+
+        decision="Block"
+
+    elif final_score>=40:
+
+        decision="Warning"
 
     else:
 
-        decision = "Allow"
+        decision="Allow"
 
 
+    # 최종 판단 근거
+    if matched_rules:
 
-    return {
+        final_reason=", ".join(
 
-        "risk_score": final_score,
+            [
+                x["rule"]
+                for x in matched_rules
+            ]
 
-        "decision": decision,
+        )
 
+    else:
+
+        final_reason="탐지된 위협 없음"
+
+
+    return{
+
+        "risk_score":
+        final_score,
+
+        "decision":
+        decision,
+
+        "matched_rules":
+        matched_rules,
+
+        "final_reason":
+        final_reason
     }

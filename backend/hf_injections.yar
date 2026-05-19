@@ -131,6 +131,7 @@ rule HF_Prompt_Injection_High_Risk {
     meta:
         description = "치명적인 프롬프트 인젝션 및 시스템 정보/권한 탈취 시도"
         risk_score = 80
+        severity = "critical"
         
     strings:
         // 1. 초기, 숨겨진, 내부, 개발자 키워드 추가
@@ -156,6 +157,7 @@ rule HF_Prompt_Injection_Medium_Risk {
     meta:
         description = "의심스러운 지시어 덮어쓰기, 가상 시나리오, 인코딩 우회 (오탐 주의)"
         risk_score = 40
+        severity = "medium"
         
     strings:
         // 1. 일반적인 역할 부여
