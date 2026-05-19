@@ -34,9 +34,6 @@ def calculate_risk(rule_result, llm_result):
 
     # 단, YARA가 이미 100점(Block)이면 더 이상 더할 필요 없겠죠?
 
-    if llm_result.get("detected") and score < 100:
-
-        score += 40
 
 
 
