@@ -97,8 +97,10 @@ class EmbeddingScanner:
         
         similarity = cosine_similarity(input_vector, [best_match_vector])[0][0]
         
-        # 유사도가 82% 이상이면 완벽한 의미적 일치로 간주
-        if similarity >= 0.82:
+        # 강한 매칭 티어는 사실상 비활성화 (0.99). Korean MiniLM이 한국어 짧은 문장에
+        # 의미 무관 0.95+ 유사도를 산출하는 모델 한계 때문. 약한 매칭 티어(0.70~0.99)는
+        # max 40점이라 단독으로 Warning(임계값 30)을 못 부르며 YARA·LLM을 보조하는 역할.
+        if similarity >= 0.99:
             return {
                 "detected": True,
                 "attack_type": f"Semantic_{attack_category}",
