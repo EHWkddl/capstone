@@ -9,6 +9,12 @@ from embedding_scanner import EmbeddingScanner
 # =========================
 # 상수 (Risk Score 모델)
 # =========================
+# 임베딩 스캐너 임시 비활성화
+# 사유: paraphrase-multilingual-MiniLM-L12-v2 모델이 한국어 짧은 문장에
+# 무차별 0.70+ 유사도를 산출하여 정상 입력에 Suspected_Variant 라벨 부여.
+# 한국어 특화 임베딩 모델(KoSimCSE 등)로 교체 후 재활성화 예정.
+ENABLE_EMBEDDING_SCANNER = os.getenv("ENABLE_EMBEDDING_SCANNER", "false").lower() == "true"
+
 WEIGHTS = {"rule": 0.4, "llm": 0.5, "context": 0.1}
 WEIGHTS_LLM_FAIL = {"rule": 0.9, "context": 0.1}
 THRESHOLDS = {"warning": 30, "block": 70}
@@ -111,6 +117,8 @@ def get_yara_scanner():
 
 
 def get_embedding_scanner():
+    if not ENABLE_EMBEDDING_SCANNER:
+        return None
     if not hasattr(get_embedding_scanner, "instance"):
         print("[System] Embedding 스캐너 로딩 시작 (잠시만 기다려주세요)...")
         BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -143,13 +151,20 @@ def rule_detect(user_input: str) -> dict:
         }
     """
     y_scanner = get_yara_scanner()
-    e_scanner = get_embedding_scanner()
-
     yara_result = y_scanner.analyze(user_input)
-    embed_result = e_scanner.analyze(user_input)
-
     yara_score = yara_result.get("risk_score", 0) if yara_result.get("detected") else 0
-    embed_score = embed_result.get("risk_score", 0) if embed_result.get("detected") else 0
+
+    # 임베딩 스캐너는 ENABLE_EMBEDDING_SCANNER=true 일 때만 호출.
+    # 비활성화 시 embed_score=0, similarity=None 으로 고정되어
+    # "Suspected_Variant" 라벨이 절대 부여되지 않음.
+    if ENABLE_EMBEDDING_SCANNER:
+        e_scanner = get_embedding_scanner()
+        embed_result = e_scanner.analyze(user_input)
+        embed_score = embed_result.get("risk_score", 0) if embed_result.get("detected") else 0
+    else:
+        embed_result = {}
+        embed_score = 0
+
     rule_score = max(yara_score, embed_score)
 
     if rule_score == 0:
