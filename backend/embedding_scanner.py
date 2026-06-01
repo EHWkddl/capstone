@@ -98,19 +98,18 @@ class EmbeddingScanner:
         similarity = cosine_similarity(input_vector, [best_match_vector])[0][0]
         
         # 유사도가 82% 이상이면 완벽한 의미적 일치로 간주
-        if similarity >= 0.82:
+        if similarity >= 0.95:
             return {
                 "detected": True,
                 "attack_type": f"Semantic_{attack_category}",
                 "risk_score": base_risk,
                 "similarity": round(float(similarity), 3)
             }
-        # 유사도가 70~81% 사이면 유사 변형으로 간주하여 점수 하향(Warning 유도)
-        elif similarity >= 0.70:
+        elif similarity >= 0.89:
             return {
                 "detected": True,
                 "attack_type": "Suspected_Variant",
-                "risk_score": min(base_risk, 40), # 최대 40점(Warning)까지만 부여
+                "risk_score": min(base_risk, 40), 
                 "similarity": round(float(similarity), 3)
             }
 

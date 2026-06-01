@@ -2,7 +2,7 @@ import yara
 import os
 
 class YaraScanner:
-    def __init__(self, rule_path: str = "index.yar"):
+    def __init__(self, rule_path: str = "hf_injections.yar"):
         """서버 시작 시 YARA 룰을 메모리에 적재"""
 
         if not os.path.exists(rule_path):

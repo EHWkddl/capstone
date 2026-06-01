@@ -15,10 +15,10 @@ def get_yara_scanner():
         print("[System] YARA 스캐너 로딩 중...")
         from yara_scanner import YaraScanner
         BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-        RULE_PATH = os.path.join(BASE_DIR, "index.yar")
+        RULE_PATH = os.path.join(BASE_DIR, "hf_injections.yar")
         get_yara_scanner.instance = YaraScanner(rule_path=RULE_PATH)
         print("[System] YARA 스캐너 로딩 완료!")
-    return get_yara_scanner.instance
+    return get_yara_scanner.instance    
 
 def get_embedding_scanner():
     # global 변수 대신 함수 자체에 저장하여 에러 원천 차단

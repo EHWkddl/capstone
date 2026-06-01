@@ -70,7 +70,7 @@ Prompt Injection 또는 Jailbreak 여부를 판단하세요.
 detected: true 또는 false
 attack_type: Prompt Injection 또는 Jailbreak 또는 Normal
 reason: 짧은 이유
-"""
+""" 
 
 # =========================
 # 핵심 API
