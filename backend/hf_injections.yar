@@ -185,3 +185,65 @@ rule HF_Prompt_Injection_Medium_Risk {
     condition:
         any of them
 }
+
+rule HF_Korean_SafetyBypass {
+    meta:
+        description = "안전 정책/필터/제한 우회 시도"
+        risk_score = 85
+        severity = "critical"
+        category = "안전정책_우회"
+    strings:
+        $kr_warn         = /경고\s*(없이|무시)/
+        $kr_refuse       = /거절\s*(없이|무시|하지\s*말고)/
+        $kr_filter       = /필터\s*(없이|해제|우회|꺼)/
+        $kr_censor       = /검열\s*(없이|우회|해제)/
+        $kr_limit        = /제한\s*(없이|해제|풀고)/
+        $kr_guard        = /안전\s*장치\s*(해제|꺼|우회)/
+        $kr_policy       = /안전\s*정책\s*(우회|무시|해제)/
+        $kr_content      = /콘텐츠\s*필터\s*(꺼|우회|해제)/
+        $kr_regardless   = /상관\s*없이\s*(답|말|출력)/
+        $kr_noexception  = /예외\s*없이\s*(답|말|출력)/
+        $kr_unconditional= /무조건\s*(답|출력|말해)/
+        $en_without      = /without\s*(warning|refusal|filter|restriction|censorship)/i
+        $en_bypass       = /bypass\s*(safety|content\s*filter|guideline)/i
+        $en_disable      = /disable\s*(safety|filter|content\s*filter)/i
+    condition:
+        any of them
+}
+
+rule HF_Korean_SensitiveInfo {
+    meta:
+        description = "민감정보 실제 값 요구"
+        risk_score = 90
+        severity = "critical"
+        category = "민감정보_요구"
+    strings:
+        $kr_apikey   = /(저장된|서버의|실제|진짜)\s*API\s*키/
+        $kr_token    = /(저장된|서버의|실제|진짜)\s*토큰/
+        $kr_passwd   = /(저장된|서버의|실제|진짜)\s*비밀번호/
+        $kr_credreq  = /(API\s*키|토큰|비밀번호|패스워드)\s*(를|을)?\s*(알려|보여|출력|노출)/
+        $kr_envvar   = /환경\s*변수\s*(값|내용)\s*(알려|보여|출력)/
+        $kr_envfile  = /\.env\s*(파일|내용|값)/
+        $en_reveal   = /(show|reveal|output|print)\s*(your|the)\s*(api\s*key|token|password|secret)/i
+        $en_envvar   = /environment\s*variable.*(value|content)/i
+    condition:
+        any of them
+}
+
+rule HF_Korean_InstructionChange {
+    meta:
+        description = "지시 변경 / 특정 응답 강제"
+        risk_score = 80
+        severity = "critical"
+        category = "지시_무시"
+    strings:
+        $kr_change       = /지시\s*(사항)?\s*(을|를)?\s*(다음|아래)\s*(으로|로)?\s*(변경|바꿔)/
+        $kr_always       = /항상\s*(.*라고|.*으로)\s*(답|대답|응답)/
+        $kr_fromnow      = /앞으로는\s*(.*라고|.*으로)\s*(답|대답)/
+        $kr_uncond       = /무조건\s*(.*라고|.*으로)\s*(답|대답)/
+        $en_change       = /change\s*your\s*instructions?\s*to/i
+        $en_alwaysanswer = /always\s*answer\s*with/i
+        $en_fromnow      = /from\s*now\s*on,?\s*(always|only)\s*(answer|respond)/i
+    condition:
+        any of them
+}
