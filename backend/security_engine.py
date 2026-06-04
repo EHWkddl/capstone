@@ -3,18 +3,11 @@ import json
 import os
 
 from yara_scanner import YaraScanner
-from embedding_scanner import EmbeddingScanner
 
 
 # =========================
 # 상수 (Risk Score 모델)
 # =========================
-# 임베딩 스캐너 임시 비활성화
-# 사유: paraphrase-multilingual-MiniLM-L12-v2 모델이 한국어 짧은 문장에
-# 무차별 0.70+ 유사도를 산출하여 정상 입력에 Suspected_Variant 라벨 부여.
-# 한국어 특화 임베딩 모델(KoSimCSE 등)로 교체 후 재활성화 예정.
-ENABLE_EMBEDDING_SCANNER = os.getenv("ENABLE_EMBEDDING_SCANNER", "false").lower() == "true"
-
 WEIGHTS = {"rule": 0.4, "llm": 0.5, "context": 0.1}
 WEIGHTS_LLM_FAIL = {"rule": 0.9, "context": 0.1}
 THRESHOLDS = {"warning": 30, "block": 70}
@@ -116,93 +109,31 @@ def get_yara_scanner():
     return get_yara_scanner.instance
 
 
-def get_embedding_scanner():
-    if not ENABLE_EMBEDDING_SCANNER:
-        return None
-    if not hasattr(get_embedding_scanner, "instance"):
-        print("[System] Embedding 스캐너 로딩 시작 (잠시만 기다려주세요)...")
-        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-        get_embedding_scanner.instance = EmbeddingScanner(
-            db_path=os.path.join(BASE_DIR, "vector_db"),
-            seed_file=os.path.join(BASE_DIR, "seeds.json"),
-        )
-        print("[System] Embedding 스캐너 로딩 완료")
-    return get_embedding_scanner.instance
-
-
 # =========================
-# Rule 탐지 (YARA + Embedding 통합)
+# Rule 탐지 (YARA)
 # =========================
 def rule_detect(user_input: str) -> dict:
     """
-    YARA와 Embedding 두 탐지기를 모두 돌려 점수 높은 쪽을 채택.
+    YARA 스캐너의 결과를 그대로 반환.
 
     Returns:
         {
             "detected":           bool,
-            "rule_score":         int,         # max(yara_score, embed_score)
-            "yara_score":         int,
-            "embed_score":        int,
-            "attack_type":        str,         # 승자 기준
-            "matched_rules":      List[Dict],  # YARA 매칭 상세 (Embedding 단독 매치면 빈 리스트)
+            "rule_score":         int,
+            "attack_type":        str,
+            "matched_rules":      List[Dict],
             "matched_categories": List[str],
-            "similarity":         float | None,  # Embedding 승리 시 유사도
             "reason":             str,
         }
     """
-    y_scanner = get_yara_scanner()
-    yara_result = y_scanner.analyze(user_input)
-    yara_score = yara_result.get("risk_score", 0) if yara_result.get("detected") else 0
-
-    # 임베딩 스캐너는 ENABLE_EMBEDDING_SCANNER=true 일 때만 호출.
-    # 비활성화 시 embed_score=0, similarity=None 으로 고정되어
-    # "Suspected_Variant" 라벨이 절대 부여되지 않음.
-    if ENABLE_EMBEDDING_SCANNER:
-        e_scanner = get_embedding_scanner()
-        embed_result = e_scanner.analyze(user_input)
-        embed_score = embed_result.get("risk_score", 0) if embed_result.get("detected") else 0
-    else:
-        embed_result = {}
-        embed_score = 0
-
-    rule_score = max(yara_score, embed_score)
-
-    if rule_score == 0:
-        return {
-            "detected": False,
-            "rule_score": 0,
-            "yara_score": 0,
-            "embed_score": 0,
-            "attack_type": "None",
-            "matched_rules": [],
-            "matched_categories": [],
-            "similarity": None,
-            "reason": "탐지된 위협 패턴 없음",
-        }
-
-    yara_wins = yara_score >= embed_score
-    attack_type = (
-        yara_result.get("attack_type", "Unknown")
-        if yara_wins
-        else embed_result.get("attack_type", "Semantic_Match")
-    )
-    similarity = embed_result.get("similarity") if not yara_wins else None
-    reason = (
-        yara_result.get("reason", "YARA 매칭")
-        if yara_wins
-        else f"Embedding 의미 매칭 (similarity={similarity})"
-    )
-
+    yara_result = get_yara_scanner().analyze(user_input)
     return {
-        "detected": True,
-        "rule_score": rule_score,
-        "yara_score": yara_score,
-        "embed_score": embed_score,
-        "attack_type": attack_type,
+        "detected": yara_result.get("detected", False),
+        "rule_score": yara_result.get("risk_score", 0),
+        "attack_type": yara_result.get("attack_type", "None"),
         "matched_rules": yara_result.get("matched_rules", []),
         "matched_categories": yara_result.get("matched_categories", []),
-        "similarity": similarity,
-        "reason": reason,
+        "reason": yara_result.get("reason", ""),
     }
 
 

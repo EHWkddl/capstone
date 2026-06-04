@@ -104,7 +104,6 @@ async def analyze(req: AnalyzeRequest):
         print(
             f'[INFO] input="{truncated}" '
             f'rule={risk_result["rule_score"]} '
-            f'(yara={rule_result.get("yara_score", 0)} embed={rule_result.get("embed_score", 0)}) '
             f'llm={risk_result["llm_score"]} '
             f'context={risk_result["context_score"]} '
             f'final={risk_result["final_risk_score"]} '
