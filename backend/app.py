@@ -1,13 +1,22 @@
 import os
+from typing import Optional
 print("[System] 1. 기본 라이브러리 로딩 중...")
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 import google.generativeai as genai
 
 print("[System] 2-1. database 모듈 로딩 시작...")
-from database import init_db, save_message, get_history, get_full_logs
+from database import (
+    init_db,
+    save_message,
+    get_history,
+    get_full_logs,
+    get_logs,
+    get_logs_count,
+    get_log_by_id,
+)
 print("[System] 2-2. database 모듈 로딩 완료! security_engine 로딩 시작...")
 from security_engine import (
     rule_detect,
@@ -15,6 +24,7 @@ from security_engine import (
     calculate_context_score,
     calculate_risk,
 )
+from labels import normalize_attack_type, normalize_intent
 print("[System] 2-3. security_engine 로딩 완료!")
 
 
@@ -91,12 +101,15 @@ async def analyze(req: AnalyzeRequest):
         # 3. 가중합 + override + fail-soft
         risk_result = calculate_risk(rule_result, llm_result, context_score)
 
-        # 4. attack_type: 룰 매칭 우선, 아니면 LLM intent
-        attack_type = (
+        # 4. attack_type / intent 한국어 정규화
+        #    intent 는 LLM enum 좁은 매핑, attack_type 은 룰 영문 라벨까지 포함하는 broad 매핑
+        intent = normalize_intent(llm_result["intent"])
+        raw_attack_type = (
             rule_result["attack_type"]
             if rule_result.get("detected")
             else llm_result["intent"]
         )
+        attack_type = normalize_attack_type(raw_attack_type)
 
         # 5. 백엔드 로그 (한 줄 요약)
         truncated = user_input if len(user_input) <= 80 else user_input[:77] + "..."
@@ -129,6 +142,7 @@ async def analyze(req: AnalyzeRequest):
             )
 
         # 7. DB 저장
+        # role=user: 간단히 (attack_type, risk_score 만 의미 있음)
         save_message(
             conversation_id=conversation_id,
             role="user",
@@ -136,12 +150,24 @@ async def analyze(req: AnalyzeRequest):
             attack_type=attack_type,
             risk_score=risk_result["final_risk_score"],
         )
+        # role=security_engine: 분석 결과 전체 저장 (intent 도 정규화된 값 사용)
         save_message(
             conversation_id=conversation_id,
             role="security_engine",
             content=security_result,
             attack_type=attack_type,
             risk_score=risk_result["final_risk_score"],
+            decision=risk_result["decision"],
+            final_risk_score=risk_result["final_risk_score"],
+            rule_score=risk_result["rule_score"],
+            llm_score=risk_result["llm_score"],
+            context_score=risk_result["context_score"],
+            intent=intent,
+            reason=llm_result["reason"],
+            confidence=llm_result["confidence"],
+            matched_rules=rule_result["matched_rules"],
+            override=risk_result["override"],
+            scoring_mode=risk_result["scoring_mode"],
         )
 
         # 8. 응답 (신규 11개 필드 + 기존 호환 필드)
@@ -154,7 +180,7 @@ async def analyze(req: AnalyzeRequest):
             "llm_score":        risk_result["llm_score"],
             "context_score":    risk_result["context_score"],
             "matched_rules":    rule_result["matched_rules"],
-            "intent":           llm_result["intent"],
+            "intent":           intent,
             "reason":           llm_result["reason"],
             "confidence":       llm_result["confidence"],
             # legacy
@@ -181,5 +207,54 @@ async def get_logs_history(conversation_id: str):
     try:
         logs = get_full_logs(conversation_id.strip())
         return logs if logs else []
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/logs")
+@app.get("/api/logs")
+async def list_logs(
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    decision: Optional[str] = Query(None, description="Allow / Warning / Block"),
+    from_date: Optional[str] = Query(None, description="ISO 8601 (inclusive)"),
+    to_date: Optional[str] = Query(None, description="ISO 8601 (inclusive)"),
+    conversation_id: Optional[str] = Query(None),
+):
+    """탐지 로그 목록 (페이지네이션 + 필터).
+
+    role='security_engine' row 만 최신순으로 반환.
+    """
+    try:
+        total = get_logs_count(
+            decision=decision,
+            from_date=from_date,
+            to_date=to_date,
+            conversation_id=conversation_id,
+        )
+        items = get_logs(
+            limit=limit,
+            offset=offset,
+            decision=decision,
+            from_date=from_date,
+            to_date=to_date,
+            conversation_id=conversation_id,
+        )
+        return {"total": total, "items": items}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/logs/{log_id}")
+@app.get("/api/logs/{log_id}")
+async def get_log_detail(log_id: int):
+    """단건 로그 상세. matched_rules 는 list 로 deserialize 되어 반환."""
+    try:
+        log = get_log_by_id(log_id)
+        if log is None:
+            raise HTTPException(status_code=404, detail="Log not found")
+        return log
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

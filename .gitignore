@@ -9,6 +9,7 @@ __pycache__/
 backend/.env
 backend/chat_logs.db
 backend/__pycache__/
+backend/venv/
 
 # Node / React
 frontend/node_modules/
