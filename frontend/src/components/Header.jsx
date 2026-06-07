@@ -7,7 +7,6 @@ const NAV_ITEMS = [
   { to: '/console', label: '보안 검사' },
   { to: '/logs', label: '탐지 로그' },
   { to: '/criteria', label: '탐지 기준' },
-  { to: '/test', label: '테스트 검증' },
   { to: '/guide', label: '사용 가이드' },
 ]
 
@@ -15,10 +14,28 @@ function Header() {
   // 다크모드 토글은 placeholder. 다음 단계에서 실제 기능 연결.
   const [isDark, setIsDark] = useState(true)
 
+  const resetHomeScroll = () => {
+    const scrollToTop = () => {
+      document.querySelector('.home-slides')?.scrollTo({
+        top: 0,
+        behavior: 'smooth',
+      })
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
+    scrollToTop()
+    window.setTimeout(scrollToTop, 80)
+  }
+
   return (
     <header className="gnb">
       <div className="gnb-inner">
-        <Link to="/" className="gnb-logo" aria-label="Prompta 홈으로">
+        <Link
+          to="/"
+          className="gnb-logo"
+          aria-label="Prompta 홈으로"
+          onClick={resetHomeScroll}
+        >
           <img src={logo} alt="Prompta" className="gnb-logo-img" />
         </Link>
 

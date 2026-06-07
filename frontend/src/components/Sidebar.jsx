@@ -5,7 +5,6 @@ const NAV_ITEMS = [
   { to: '/console', label: '보안 검사' },
   { to: '/logs', label: '탐지 로그' },
   { to: '/criteria', label: '탐지 기준' },
-  { to: '/test', label: '테스트 검증' },
   { to: '/guide', label: '사용 가이드' },
 ]
 
