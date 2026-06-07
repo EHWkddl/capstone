@@ -26,7 +26,7 @@ import requests
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
 INPUT_CSV = os.path.join(PROJECT_ROOT, "data", "prompt_test_dataset.csv")
-OUTPUT_CSV = os.path.join(PROJECT_ROOT, "data", "prompt_test_result.csv")
+OUTPUT_CSV = os.path.join(PROJECT_ROOT, "data", "prompt_test_result_v6.csv")
 
 DEFAULT_URL = "http://localhost:8000/api/analyze"
 DEFAULT_TIMEOUT = 60
