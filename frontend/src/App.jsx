@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import './App.css'
 
 import Header from './components/Header'
@@ -8,7 +8,6 @@ import HomePage from './pages/HomePage'
 import ConsolePage from './pages/ConsolePage'
 import LogsPage from './pages/LogsPage'
 import CriteriaPage from './pages/CriteriaPage'
-import TestPage from './pages/TestPage'
 import GuidePage from './pages/GuidePage'
 
 function App() {
@@ -21,8 +20,8 @@ function App() {
           <Route path="/console" element={<ConsolePage />} />
           <Route path="/logs" element={<LogsPage />} />
           <Route path="/criteria" element={<CriteriaPage />} />
-          <Route path="/test" element={<TestPage />} />
           <Route path="/guide" element={<GuidePage />} />
+          <Route path="/test" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
       <Footer />

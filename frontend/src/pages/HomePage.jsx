@@ -1,5 +1,13 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
-import { motion, useInView, useAnimation } from 'framer-motion'
+import {
+  AnimatePresence,
+  motion,
+  useInView,
+  useAnimation,
+  useMotionValue,
+  useScroll,
+  useTransform,
+} from 'framer-motion'
 import { Link } from 'react-router-dom'
 import logo from '../assets/prompta-logo.png'
 
@@ -72,8 +80,8 @@ function HomePage() {
 
   return (
     <div className="home-slides" ref={containerRef}>
-      <Slide1Hero slideRef={slide1Ref} />
-      <Slide2Why slideRef={slide2Ref} containerRef={containerRef} />
+      <IntroTransitionSection slideRef={slide1Ref} containerRef={containerRef} />
+      <ScrollRevealSection slideRef={slide2Ref} containerRef={containerRef} />
       <Slide3Result slideRef={slide3Ref} containerRef={containerRef} />
       <Slide4Features slideRef={slide4Ref} />
       <Slide5HowItWorks slideRef={slide5Ref} />
@@ -95,53 +103,147 @@ function HomePage() {
   )
 }
 
-/* ============= Slide 1: Hero ============= */
+/* ============= Slides 1-2: Intro transition ============= */
 
-function Slide1Hero({ slideRef }) {
+function IntroTransitionSection({ slideRef, containerRef }) {
+  const introProgress = useMotionValue(0)
+
+  useEffect(() => {
+    const container = containerRef.current
+    const section = slideRef.current
+    if (!container || !section) return
+
+    let rafId = null
+
+    const updateProgress = () => {
+      rafId = null
+      const start = section.offsetTop
+      const travel = Math.max(
+        1,
+        section.offsetHeight - container.clientHeight,
+      )
+      const raw = (container.scrollTop - start) / travel
+      introProgress.set(Math.min(1, Math.max(0, raw)))
+    }
+
+    const requestUpdate = () => {
+      if (rafId == null) rafId = requestAnimationFrame(updateProgress)
+    }
+
+    container.addEventListener('scroll', requestUpdate, { passive: true })
+    window.addEventListener('resize', requestUpdate)
+    updateProgress()
+
+    return () => {
+      container.removeEventListener('scroll', requestUpdate)
+      window.removeEventListener('resize', requestUpdate)
+      if (rafId != null) cancelAnimationFrame(rafId)
+    }
+  }, [containerRef, introProgress, slideRef])
+
+  const heroOpacity = useTransform(
+    introProgress,
+    [0, 0.16, 0.36, 0.42],
+    [1, 1, 0, 0],
+  )
+  const heroScale = useTransform(
+    introProgress,
+    [0, 0.16, 0.42],
+    [1, 1, 0.76],
+  )
+  const heroY = useTransform(
+    introProgress,
+    [0, 0.16, 0.42],
+    [0, 0, -64],
+  )
+  const heroBlur = useTransform(
+    introProgress,
+    [0.18, 0.42],
+    ['blur(0px)', 'blur(6px)'],
+  )
+  const whyOpacity = useTransform(introProgress, [0.46, 0.74, 1], [0, 1, 1])
+  const whyScale = useTransform(introProgress, [0.46, 0.74, 1], [0.88, 1, 1])
+  const whyY = useTransform(introProgress, [0.46, 0.74, 1], [60, 0, 0])
+
   return (
-    <section ref={slideRef} className="slide slide-hero">
-      <motion.img
-        src={logo}
-        alt="Prompta"
-        className="hero-logo"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.6, delay: 0, ease: 'easeOut' }}
-      />
-      <motion.h1
-        className="hero-title"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.6, delay: 0.2, ease: 'easeOut' }}
-      >
-        Prompta
-      </motion.h1>
-      <motion.p
-        className="hero-sub"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.6, delay: 0.4, ease: 'easeOut' }}
-      >
-        LLM 애플리케이션 앞단에서 프롬프트 인젝션을 막는 보안 진단 게이트웨이
-      </motion.p>
-      <motion.p
-        className="hero-by"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.6, delay: 0.55, ease: 'easeOut' }}
-      >
-        by YDB Team
-      </motion.p>
-
-      <div className="scroll-indicator-anchor">
+    <section ref={slideRef} className="intro-transition-section">
+      <div className="intro-transition-sticky">
         <motion.div
-          className="scroll-indicator"
-          animate={{ y: [0, 8, 0] }}
-          transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+          className="intro-panel intro-hero-panel"
+          style={{
+            opacity: heroOpacity,
+            scale: heroScale,
+            y: heroY,
+            filter: heroBlur,
+          }}
         >
-          <span>스크롤하여 시작</span>
-          <IconArrowDown size={20} />
+          <img src={logo} alt="Prompta" className="hero-logo" />
+          <h1 className="hero-title">Prompta</h1>
+          <p className="hero-sub">
+            LLM 애플리케이션 앞단에서 프롬프트 인젝션을 막는 보안 진단 게이트웨이
+          </p>
+          <p className="hero-by">by YDB Team</p>
+
+          <div className="scroll-indicator-anchor">
+            <motion.div
+              className="scroll-indicator"
+              animate={{ y: [0, 8, 0] }}
+              transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              <span>스크롤하여 시작</span>
+              <IconArrowDown size={20} />
+            </motion.div>
+          </div>
         </motion.div>
+
+        <motion.div
+          className="intro-panel intro-why-panel"
+          style={{ opacity: whyOpacity, scale: whyScale, y: whyY }}
+        >
+          <h2 className="slide-title">LLM 앞단, 보호받지 못한 입력이 있다면?</h2>
+          <div className="why-cards">
+            {WHY_CARDS.map((card) => {
+              const { Icon, title, desc } = card
+              return (
+                <article key={title} className="why-card">
+                  <Icon size={32} />
+                  <h3>{title}</h3>
+                  <p>{desc}</p>
+                </article>
+              )
+            })}
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  )
+}
+
+/* ============= Slide 3: Scroll Reveal ============= */
+
+function ScrollRevealSection({ slideRef, containerRef }) {
+  const { scrollYProgress } = useScroll({
+    container: containerRef,
+    target: slideRef,
+    offset: ['start start', 'end end'],
+  })
+  const fillSize = useTransform(
+    scrollYProgress,
+    [0.08, 0.82, 1],
+    ['0% 100%, 100% 100%', '100% 100%, 100% 100%', '100% 100%, 100% 100%'],
+  )
+
+  return (
+    <section ref={slideRef} className="scroll-fill-outer">
+      <div className="scroll-fill-sticky">
+        <motion.h2
+          className="scroll-fill-text"
+          style={{ backgroundSize: fillSize }}
+        >
+          프롬프트가 LLM에 도달하기 전,
+          <br />
+          Prompta가 먼저 위험을 진단합니다.
+        </motion.h2>
       </div>
     </section>
   )
@@ -166,86 +268,6 @@ const WHY_CARDS = [
     desc: 'API 키, 토큰 등 실제 값을 직접 요구하는 공격',
   },
 ]
-
-function Slide2Why({ slideRef, containerRef }) {
-  const isInView = useInView(slideRef, {
-    root: containerRef,
-    amount: 0.4,
-  })
-  const card1Controls = useAnimation()
-  const card2Controls = useAnimation()
-  const card3Controls = useAnimation()
-  const cardControls = [card1Controls, card2Controls, card3Controls]
-
-  useEffect(() => {
-    if (isInView) {
-      // Enter: staggered fade-in from below
-      card1Controls.start({
-        opacity: 1,
-        y: 0,
-        x: 0,
-        scale: 1,
-        transition: { duration: 0.5, delay: 0, ease: 'easeOut' },
-      })
-      card2Controls.start({
-        opacity: 1,
-        y: 0,
-        x: 0,
-        scale: 1,
-        transition: { duration: 0.5, delay: 0.15, ease: 'easeOut' },
-      })
-      card3Controls.start({
-        opacity: 1,
-        y: 0,
-        x: 0,
-        scale: 1,
-        transition: { duration: 0.5, delay: 0.3, ease: 'easeOut' },
-      })
-    } else {
-      // Exit: converge toward center, fade out, scale down
-      card1Controls.start({
-        opacity: 0,
-        x: 100,
-        scale: 0.8,
-        transition: { duration: 0.4, ease: 'easeIn' },
-      })
-      card2Controls.start({
-        opacity: 0,
-        scale: 0.8,
-        transition: { duration: 0.4, ease: 'easeIn' },
-      })
-      card3Controls.start({
-        opacity: 0,
-        x: -100,
-        scale: 0.8,
-        transition: { duration: 0.4, ease: 'easeIn' },
-      })
-    }
-  }, [isInView, card1Controls, card2Controls, card3Controls])
-
-  return (
-    <section ref={slideRef} className="slide slide-why">
-      <h2 className="slide-title">LLM 앞단, 보호받지 못한 입력이 있다면?</h2>
-      <div className="why-cards">
-        {WHY_CARDS.map((card, i) => {
-          const { Icon, title, desc } = card
-          return (
-            <motion.article
-              key={title}
-              className="why-card"
-              initial={{ opacity: 0, y: 30 }}
-              animate={cardControls[i]}
-            >
-              <Icon size={32} />
-              <h3>{title}</h3>
-              <p>{desc}</p>
-            </motion.article>
-          )
-        })}
-      </div>
-    </section>
-  )
-}
 
 /* ============= Slide 3: Result (single big box) ============= */
 
@@ -348,56 +370,155 @@ function Slide3Result({ slideRef, containerRef }) {
 const FEATURES = [
   {
     Icon: IconShieldCheck,
+    theme: 'rule',
     accent: '#4a9eff',
     accentRgb: '74, 158, 255',
     title: 'Rule 기반 1차 탐지',
-    oneLine: '패턴 기반 위험 후보 탐지',
-    body: 'YARA 룰셋으로 명확한 공격 패턴을 빠르게 식별합니다. 한국어/영어 변형 표현도 함께 대응합니다.',
+    oneLine: 'YARA 룰과 정규표현식으로 위험 후보를 빠르게 식별',
+    body: '명확한 공격 패턴을 먼저 걸러내고, 한국어와 영어 변형 표현까지 빠르게 스캔합니다.',
     weight: '가중치 0.4',
+    tags: ['YARA', 'Regex', 'Scan Line', 'Pattern Filter'],
   },
   {
     Icon: IconSparkles,
+    theme: 'llm',
     accent: '#a78bfa',
     accentRgb: '167, 139, 250',
     title: 'LLM 의미 분석',
-    oneLine: '의도 기반 위험도 산출',
-    body: 'Gemini 가 입력의 의도를 분류하고 위험도를 산출합니다. 개념 설명과 실제 공격을 구분합니다.',
+    oneLine: 'LLM이 입력 의도와 문맥을 분석해 실제 공격 여부를 판단',
+    body: '표면 키워드가 아니라 문장의 의도, 역할 변경 시도, 우회 표현을 함께 해석합니다.',
     weight: '가중치 0.5',
+    tags: ['Intent', 'Semantic', 'LLM Judge', 'Meaning Graph'],
   },
   {
     Icon: IconLayers,
+    theme: 'context',
     accent: '#2dd4bf',
     accentRgb: '45, 212, 191',
     title: 'Context 문맥 분석',
-    oneLine: '대화 흐름 기반 누적 평가',
-    body: '이전 대화 기록을 누적해 평가합니다. 멀티턴 공격 패턴을 식별합니다.',
+    oneLine: '이전 대화 기록을 기반으로 누적 우회 시도와 멀티턴 공격을 평가',
+    body: '단일 입력만 보지 않고 대화 흐름의 누적 위험을 계산해 점진적인 공격 패턴을 탐지합니다.',
     weight: '가중치 0.1',
+    tags: ['Timeline', 'Multi-turn', 'Memory', 'Layered Flow'],
   },
 ]
 
 function Slide4Features({ slideRef }) {
+  const [activeFeature, setActiveFeature] = useState(0)
+  const activeSlide = FEATURES[activeFeature]
+  const ActiveFeatureIcon = activeSlide.Icon
+
+  const goFeature = (direction) => {
+    setActiveFeature((current) => {
+      const next = current + direction
+      if (next < 0) return FEATURES.length - 1
+      if (next >= FEATURES.length) return 0
+      return next
+    })
+  }
+
   return (
     <section ref={slideRef} className="slide slide-features">
-      <h2 className="slide-title">3중 방어 구조</h2>
-      <div className="feature-cards">
-        {FEATURES.map((f) => {
-          const { Icon, accent, accentRgb, title, oneLine, body, weight } = f
-          return (
-            <article
-              key={title}
-              className="feature-card"
-              style={{ '--accent': accent, '--accent-rgb': accentRgb }}
+      <div className="feature-carousel">
+        <div className="feature-carousel-top">
+          <h2 className="feature-section-title">3중 방어 구조</h2>
+          <span className="feature-count">
+            {activeFeature + 1} / {FEATURES.length}
+          </span>
+        </div>
+
+        <div className="feature-slider-window">
+          <AnimatePresence mode="wait">
+            <motion.article
+              key={activeSlide.title}
+              className={`feature-slide-card feature-slide-${activeSlide.theme}`}
+              style={{
+                '--accent': activeSlide.accent,
+                '--accent-rgb': activeSlide.accentRgb,
+              }}
+              initial={{
+                opacity: 0,
+                scale: 0.78,
+                y: 40,
+                borderRadius: 48,
+                boxShadow: '0 38px 120px rgba(0, 0, 0, 0.52)',
+              }}
+              animate={{
+                opacity: 1,
+                scale: 1,
+                y: 0,
+                borderRadius: 0,
+                boxShadow: '0 0 0 rgba(0, 0, 0, 0)',
+              }}
+              exit={{
+                opacity: 0,
+                scale: 0.92,
+                y: -12,
+                filter: 'brightness(0.72) blur(2px)',
+              }}
+              transition={{ duration: 0.46, ease: [0.22, 1, 0.36, 1] }}
             >
-              <span className="feature-icon">
-                <Icon size={32} />
-              </span>
-              <h3 className="feature-title">{title}</h3>
-              <p className="feature-oneline">{oneLine}</p>
-              <p className="feature-body">{body}</p>
-              <span className="feature-weight-badge">{weight}</span>
-            </article>
-          )
-        })}
+              <div className="feature-slide-copy">
+                <span className="feature-weight-badge">
+                  {activeSlide.weight}
+                </span>
+                <h3 className="feature-title">{activeSlide.title}</h3>
+                <p className="feature-oneline">{activeSlide.oneLine}</p>
+                <p className="feature-body">{activeSlide.body}</p>
+                <div className="feature-tag-row">
+                  {activeSlide.tags.map((tag) => (
+                    <span key={tag} className="feature-tag">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="feature-slide-visual" aria-hidden="true">
+                <span className="feature-orbit orbit-one" />
+                <span className="feature-orbit orbit-two" />
+                <span className="feature-scan-line" />
+                <span className="feature-node node-a" />
+                <span className="feature-node node-b" />
+                <span className="feature-node node-c" />
+                <span className="feature-icon">
+                  <ActiveFeatureIcon size={48} />
+                </span>
+              </div>
+            </motion.article>
+          </AnimatePresence>
+        </div>
+
+        <div className="feature-indicators" aria-label="3중 방어 구조 슬라이드">
+          {FEATURES.map((feature, index) => (
+            <button
+              key={feature.title}
+              type="button"
+              className={`feature-indicator${
+                activeFeature === index ? ' active' : ''
+              }`}
+              onClick={() => setActiveFeature(index)}
+              aria-label={`${index + 1}번째 방어 구조 보기`}
+              aria-current={activeFeature === index ? 'true' : undefined}
+            />
+          ))}
+        </div>
+
+        <button
+          type="button"
+          className="feature-nav-btn feature-nav-prev"
+          onClick={() => goFeature(-1)}
+          aria-label="이전 방어 구조 보기"
+        >
+          <IconArrowLeft size={22} />
+        </button>
+        <button
+          type="button"
+          className="feature-nav-btn feature-nav-next"
+          onClick={() => goFeature(1)}
+          aria-label="다음 방어 구조 보기"
+        >
+          <IconArrowRight size={22} />
+        </button>
       </div>
     </section>
   )
@@ -498,6 +619,25 @@ function IconArrowRight({ size = 20 }) {
     >
       <path d="M5 12h14" />
       <path d="m12 5 7 7-7 7" />
+    </svg>
+  )
+}
+
+function IconArrowLeft({ size = 20 }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M19 12H5" />
+      <path d="m12 19-7-7 7-7" />
     </svg>
   )
 }
